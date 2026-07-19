@@ -69,7 +69,7 @@ function ServePicker({value,onChange}:{value:string;onChange:(value:string)=>voi
 export default function Home(){
   const [tab,setTab]=useState<"plan"|"settings">("plan");
   const [serve,setServe]=useState(defaultServe);
-  const [selected,setSelected]=useState<string[]>(["ribs","brisket","chicken"]);
+  const [selected,setSelected]=useState<string[]>(["pulled-pork"]);
   const [configs,setConfigs]=useState<Record<string,CookConfig>>(DEFAULT_CONFIGS);
   const [cookerCount,setCookerCount]=useState(1);
   const [cookerNames,setCookerNames]=useState(["Cooker 1","Cooker 2","Cooker 3"]);
