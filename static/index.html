@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Plan every fire, protein and finish—Pitmaster Munse style." />
+    <link rel="icon" href="/favicon.svg" />
+    <title>Pitmaster Munse Cook Planner</title>
+    <script src="/ga4-config.js"></script>
+    <script>
+      if (/^G-[A-Z0-9]+$/.test(window.PITMASTER_GA4_ID || "")) {
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function(){dataLayer.push(arguments);};
+        gtag("js", new Date());
+        gtag("config", window.PITMASTER_GA4_ID);
+        var ga = document.createElement("script");
+        ga.async = true;
+        ga.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(window.PITMASTER_GA4_ID);
+        document.head.appendChild(ga);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

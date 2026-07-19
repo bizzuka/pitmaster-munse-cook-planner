@@ -1,0 +1,145 @@
+.print-brand {
+  display: none;
+}
+
+.copy-tooltip {
+  position: relative;
+}
+
+.copy-tooltip span {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 10px);
+  z-index: 30;
+  width: max-content;
+  padding: 7px 10px;
+  border-radius: 4px;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  line-height: 1;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.copy-tooltip span::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  border: 5px solid transparent;
+  border-bottom-color: #111;
+  transform: translateX(-50%);
+}
+
+.copy-tooltip:hover span,
+.copy-tooltip:focus-visible span {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+@media print {
+  @page {
+    margin: .45in;
+  }
+
+  html,
+  body,
+  main,
+  .workspace,
+  .plan,
+  .timeline {
+    min-height: 0 !important;
+    height: auto !important;
+    background: #fff !important;
+    background-image: none !important;
+  }
+
+  main::before,
+  main::after,
+  .workspace::before,
+  .workspace::after,
+  .plan::before,
+  .plan::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  .topbar,
+  .hero,
+  .picker,
+  footer,
+  .outline {
+    display: none !important;
+  }
+
+  .print-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 18px;
+    height: 76px;
+    padding: 8px 18px;
+    background: #111 !important;
+    color: #fff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-brand img {
+    display: block;
+    width: 175px;
+    height: 58px;
+    object-fit: contain;
+  }
+
+  .print-brand span {
+    padding-left: 18px;
+    border-left: 1px solid #8d6a4f;
+    color: #ef5a5a;
+    font: 700 15px/1 Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .workspace {
+    display: block;
+    max-width: none;
+    min-height: 0;
+    margin: 0;
+    background: #fff;
+  }
+
+  .plan {
+    padding: 24px 4px;
+    background: #fff;
+  }
+
+  .plan-head {
+    margin-bottom: 16px;
+  }
+
+  .plan h2 {
+    font-size: 26px;
+  }
+
+  .kickoff {
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .event,
+  .temp-warning {
+    break-inside: avoid;
+  }
+
+  .timeline {
+    margin-top: 14px;
+  }
+}
