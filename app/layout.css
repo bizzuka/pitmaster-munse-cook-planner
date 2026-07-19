@@ -236,4 +236,10 @@
     font-size: 20px;
     line-height: 1;
   }
+
+  .section-heading > span {
+    min-width: 78px;
+    text-align: center;
+    white-space: nowrap;
+  }
 }
