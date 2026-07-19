@@ -10,6 +10,10 @@
   color: #e04f4f;
 }
 
+.cooker-count > span {
+  color: #e04f4f;
+}
+
 .serve-picker {
   position: relative;
 }
