@@ -186,3 +186,54 @@
     left: 0;
   }
 }
+
+@media (max-width: 620px) {
+  .topbar {
+    height: auto;
+    min-height: 106px;
+    padding: 8px 16px 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 54px 44px;
+    column-gap: 12px;
+  }
+
+  .topbar .brand {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .topbar .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .topbar nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    align-self: stretch;
+    gap: 24px;
+  }
+
+  .topbar nav button {
+    padding: 0;
+  }
+
+  .print-button {
+    width: 40px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  .print-label {
+    display: none;
+  }
+
+  .print-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+}
