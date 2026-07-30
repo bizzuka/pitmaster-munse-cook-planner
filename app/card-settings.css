@@ -113,21 +113,52 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  margin: 0;
+  border: 0;
   padding: 14px 18px 0;
   color: #5f5044;
   font-size: 17px;
   font-weight: 900;
 }
 
-.card-rib-setting select {
-  min-width: 150px;
-  padding: 8px;
+.card-rib-setting legend {
+  padding: 0;
+}
+
+.card-rib-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.card-rib-toggle label {
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  padding: 8px 14px;
   border: 1px solid #b8a58d;
   border-radius: 5px;
   background: #fff;
   color: #342719;
+  cursor: pointer;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 900;
+}
+
+.card-rib-toggle label.active {
+  border-color: #8d5030;
+  background: #b36f3f;
+  color: #fff;
+}
+
+.card-rib-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card-rib-toggle label:focus-within {
+  outline: 3px solid rgba(239, 90, 90, .35);
+  outline-offset: 2px;
 }
 
 .card-settings-grid {
@@ -256,6 +287,15 @@
 }
 
 @media (max-width: 620px) {
+  .card-rib-setting {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .card-rib-toggle label {
+    flex: 1;
+  }
+
   .card-settings-grid {
     grid-template-columns: 1fr;
   }
