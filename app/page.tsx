@@ -5,6 +5,7 @@ import "./settings.css";
 import "./branding.css";
 import "./print.css";
 import "./layout.css";
+import "./card-settings.css";
 import { trackEvent } from "./analytics";
 
 type Stage = { label: string; beforeServe: number; detail?: string; kind?: "prep" | "fire" | "cook" | "finish" };
@@ -66,6 +67,53 @@ function ServePicker({value,onChange}:{value:string;onChange:(value:string)=>voi
   return <div className="serve-picker"><button className="serve-picker-trigger" type="button" aria-haspopup="dialog" aria-expanded={open} onClick={()=>{setView(new Date(selected.getFullYear(),selected.getMonth(),1));setOpen(!open)}}><span>{new Intl.DateTimeFormat("en-US",{month:"2-digit",day:"2-digit",year:"numeric",hour:"numeric",minute:"2-digit"}).format(selected)}</span><b className="calendar-icon" aria-hidden="true"></b></button>{open&&<div className="serve-picker-panel" role="dialog" aria-label="Choose serving date and time"><div className="calendar-head"><button type="button" aria-label="Previous month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()-1,1))}>‹</button><strong>{MONTHS[view.getMonth()]} {view.getFullYear()}</strong><button type="button" aria-label="Next month" onClick={()=>setView(new Date(view.getFullYear(),view.getMonth()+1,1))}>›</button></div><div className="calendar-weekdays">{["S","M","T","W","T","F","S"].map((d,i)=><span key={`${d}-${i}`}>{d}</span>)}</div><div className="calendar-days">{days.map(d=>{const active=d.toDateString()===selected.toDateString();const outside=d.getMonth()!==view.getMonth();return <button type="button" key={d.toISOString()} className={`${active?"selected":""} ${outside?"outside":""}`} aria-pressed={active} onClick={()=>changeDate(d.getFullYear(),d.getMonth(),d.getDate())}>{d.getDate()}</button>})}</div><div className="time-picker"><label>Hour<select value={hour12} onChange={e=>changeTime(Number(e.target.value),selected.getMinutes(),period)}>{Array.from({length:12},(_,i)=><option key={i+1}>{i+1}</option>)}</select></label><label>Minute<select value={selected.getMinutes()} onChange={e=>changeTime(hour12,Number(e.target.value),period)}>{Array.from({length:60},(_,i)=><option key={i} value={i}>{pad(i)}</option>)}</select></label><label>AM / PM<select value={period} onChange={e=>changeTime(hour12,selected.getMinutes(),e.target.value)}><option>AM</option><option>PM</option></select></label></div><button className="picker-done" type="button" onClick={()=>setOpen(false)}>Done</button></div>}</div>
 }
 
+const CARD_FIELDS:Array<[keyof CookConfig,string,string]>=[
+  ["weight","Protein weight","lb"],
+  ["cookPerLb","Cook time per pound","hr / lb"],
+  ["prep","Prep time","hours"],
+  ["fire","Fire-to-temperature","hours"],
+  ["smoke","Unwrapped smoker time","hours"],
+  ["wrap","Wrapped / covered time","hours"],
+  ["glaze","Glaze / finishing time","hours"],
+  ["rest","Rest / hold time","hours"],
+];
+
+function ProteinCard({
+  p,on,config,editing,cookerCount,cookerNames,cooker,onToggle,onEdit,onClose,onSave,onQuickUpdate,onRibType,onCooker,
+}:{
+  p:Protein;on:boolean;config:CookConfig;editing:boolean;cookerCount:number;cookerNames:string[];cooker:number;
+  onToggle:()=>void;onEdit:()=>void;onClose:()=>void;onSave:(draft:CookConfig)=>void;
+  onQuickUpdate:(patch:Partial<CookConfig>)=>void;onRibType:(variant:"Baby Back"|"St. Louis")=>void;onCooker:(index:number)=>void;
+}){
+  const [draft,setDraft]=useState(config);
+  useEffect(()=>{if(!editing)setDraft(config)},[config,editing]);
+  const update=(key:keyof CookConfig,value:number)=>{
+    const next={...draft,[key]:value};
+    if((key==="weight"||key==="cookPerLb")&&next.cookPerLb>0)next.smoke=Math.max(0,Number((next.weight*next.cookPerLb-next.wrap-next.glaze).toFixed(2)));
+    setDraft(next);
+  };
+  const setDraftRib=(variant:"Baby Back"|"St. Louis")=>setDraft({...draft,variant,wrap:variant==="Baby Back"?1.75:1.5});
+  const total=draft.prep+draft.fire+draft.smoke+draft.wrap+draft.glaze+draft.rest;
+  const cookTotal=draft.smoke+draft.wrap+draft.glaze;
+  const fields=CARD_FIELDS.filter(([key])=>p.id!=="ribs"||!(["weight","cookPerLb"] as string[]).includes(key));
+  return <article className={`protein ${on?"selected":""} ${editing?"show-settings":""}`} onClick={editing?undefined:onToggle}>
+    {editing?<div className="protein-settings-face" onClick={e=>e.stopPropagation()}>
+      <div className="card-settings-head"><div className="food-icon">{p.emoji}</div><div><small>RECIPE SETTINGS</small><h3>{p.name}</h3></div><button type="button" onClick={onClose}>↩ Back</button></div>
+      {p.id==="ribs"&&<label className="card-rib-setting"><span>Rib type</span><select value={draft.variant} onChange={e=>setDraftRib(e.target.value as "Baby Back"|"St. Louis")}><option>Baby Back</option><option>St. Louis</option></select></label>}
+      <div className="card-settings-grid">{fields.map(([key,label,unit])=><label key={key}><span>{label}</span><div><input type="number" min="0" step=".25" value={draft[key] as number} onChange={e=>update(key,Number(e.target.value))}/><small>{unit}</small></div></label>)}</div>
+      {draft.cookPerLb>0&&<div className="card-formula"><b>Weight formula</b><span>{draft.weight} lb × {draft.cookPerLb} hr/lb = <strong>{(draft.weight*draft.cookPerLb).toFixed(2)} hours</strong></span></div>}
+      <div className="card-settings-summary"><div><small>COOKING STAGES</small><b>{duration(cookTotal)}</b></div><div><small>FULL TIMELINE</small><b>{duration(total)}</b></div><div><small>EARLIEST ACTION</small><b>{total>=24?`${(total/24).toFixed(1)} days`:`${duration(total)}`}</b></div></div>
+      <div className="card-settings-save"><span>Saving updates your default and timeline.</span><button type="button" onClick={()=>onSave(draft)}>Save settings</button></div>
+    </div>:<div className="protein-front-face">
+      <div className="protein-actions"><button type="button" className="card-settings-button" aria-label={`Edit settings for ${p.name}`} title="Edit recipe settings" onClick={e=>{e.stopPropagation();onEdit()}}>⚙</button><button type="button" className="select-protein" aria-label={`${on?"Remove":"Add"} ${p.name}`}>{on?"✓":"+"}</button></div>
+      <div className="food-icon">{p.emoji}</div><div><h3>{p.name}</h3><p>{p.description}</p><small>{p.pit}</small></div>
+      {on&&p.id==="ribs"&&<div className="weight rib-buttons" onClick={e=>e.stopPropagation()}><span>Rib type</span><button type="button" className={config.variant==="Baby Back"?"active":""} onClick={()=>onRibType("Baby Back")}>Baby Back</button><button type="button" className={config.variant==="St. Louis"?"active":""} onClick={()=>onRibType("St. Louis")}>St. Louis</button></div>}
+      {on&&p.id!=="ribs"&&<label className="weight" onClick={e=>e.stopPropagation()}>Weight <input type="number" min=".5" step=".25" value={config.weight} onChange={e=>onQuickUpdate({weight:Number(e.target.value)})}/> lb <em>Updates timeline</em></label>}
+      {on&&<div className="cooker-radios" onClick={e=>e.stopPropagation()}><span>Cooker</span>{Array.from({length:cookerCount},(_,i)=><label key={i} className={cooker===i?"active":""}><input type="radio" name={`cooker-${p.id}`} checked={cooker===i} onChange={()=>onCooker(i)}/>{cookerNames[i]}</label>)}</div>}
+    </div>}
+  </article>
+}
+
 export default function Home(){
   const [tab,setTab]=useState<"plan"|"settings">("plan");
   const [serve,setServe]=useState(defaultServe);
@@ -74,6 +122,7 @@ export default function Home(){
   const [cookerCount,setCookerCount]=useState(1);
   const [cookerNames,setCookerNames]=useState(["Cooker 1","Cooker 2","Cooker 3"]);
   const [assignments,setAssignments]=useState<Record<string,number>>({});
+  const [editingProtein,setEditingProtein]=useState<string|null>(null);
   const [loaded,setLoaded]=useState(false);
   useEffect(()=>{const saved=localStorage.getItem("pitmaster-plan-v2");if(saved){try{const s=JSON.parse(saved);setSelected(s.selected||selected);setConfigs({...DEFAULT_CONFIGS,...s.configs});setCookerCount(s.cookerCount||1);setCookerNames(s.cookerNames||["Cooker 1","Cooker 2","Cooker 3"]);}catch{}}setLoaded(true)},[]);
   useEffect(()=>{if(loaded)localStorage.setItem("pitmaster-plan-v2",JSON.stringify({selected,configs,cookerCount,cookerNames}))},[selected,configs,cookerCount,cookerNames,loaded]);
@@ -93,7 +142,7 @@ export default function Home(){
     <header className="topbar"><button className="brand" onClick={()=>setTab("plan")}><img className="brand-logo" src="/pitmaster-munse-logo.jpg" alt="Pitmaster Munse"/><span><small>Cook Planner</small></span></button><nav><button className={tab==="plan"?"active":""} onClick={()=>setTab("plan")}>Cook plan</button><button className={tab==="settings"?"active":""} onClick={()=>setTab("settings")}>My settings</button></nav><div className="header-actions"><button className="icon-btn copy-tooltip" onClick={copyPlan} aria-label="Copy cook plan">⧉<span role="tooltip">Copy cook plan</span></button><button className="primary small print-button" onClick={printPlan} aria-label="Print cook plan"><span className="print-icon" aria-hidden="true">⎙</span><span className="print-label">Print plan</span></button></div></header>
     {tab==="plan"?<><div className="print-brand"><img src="/pitmaster-munse-logo.jpg" alt="Pitmaster Munse"/><span>Cook Planner</span></div>
       <section className="hero"><div className="hero-copy"><p className="eyebrow">A BARBECUE PLANNER FOR BIG CROWDS WITH BIG APPETITES</p><h1>Made for Serious Pit Masters</h1><h2>When It Absolutely, Positively<br/>Has to Be Ready at the Same Time</h2><p className="hero-body">Pick your proteins and serving time.<br/>We&apos;ll work backwards and build a coordinated smoking hot game plan.</p></div><img className="hero-photo" src="/pitmaster-munse-photo.jpg" alt="Pitmaster Munse standing beside a smoker"/><div className="serve-card"><label>When will everyone be eating?</label><ServePicker value={serve} onChange={changeServe}/><div className="cooker-count"><span>How many cookers are in use?</span>{[1,2,3].map(n=><button key={n} className={cookerCount===n?"active":""} onClick={()=>{setCookerCount(n);setAssignments({});trackEvent("cooker_count_changed",{cooker_count:n})}}>{n}</button>)}</div><div className="serve-foot"><span>◎ Local time</span><b>{chosen.length} {chosen.length===1?"protein":"proteins"}</b></div></div></section>
-      <section className="workspace"><aside className="picker"><div className="section-heading"><div><p className="eyebrow">BUILD YOUR MENU</p><h2>What’s going on the pit?</h2></div><span>{chosen.length} selected</span></div><div className="protein-grid">{PROTEINS.map(p=>{const on=selected.includes(p.id);return <article key={p.id} className={`protein ${on?"selected":""}`} onClick={()=>toggleProtein(p.id,on)}><button aria-label={`${on?"Remove":"Add"} ${p.name}`}>{on?"✓":"+"}</button><div className="food-icon">{p.emoji}</div><div><h3>{p.name}</h3><p>{p.description}</p><small>{p.pit}</small></div>{on&&p.id==="ribs"&&<div className="weight rib-buttons" onClick={e=>e.stopPropagation()}><span>Rib type</span><button className={configs.ribs.variant==="Baby Back"?"active":""} onClick={()=>setRibType("Baby Back")}>Baby Back</button><button className={configs.ribs.variant==="St. Louis"?"active":""} onClick={()=>setRibType("St. Louis")}>St. Louis</button></div>}{on&&p.id!=="ribs"&&<label className="weight" onClick={e=>e.stopPropagation()}>Weight <input type="number" min=".5" step=".25" value={configs[p.id].weight} onChange={e=>updatePlanConfig(p.id,{weight:Number(e.target.value)})}/> lb <em>Updates timeline</em></label>}{on&&<div className="cooker-radios" onClick={e=>e.stopPropagation()}><span>Cooker</span>{Array.from({length:cookerCount},(_,i)=><label key={i} className={cookerFor(p.id)===i?"active":""}><input type="radio" name={`cooker-${p.id}`} checked={cookerFor(p.id)===i} onChange={()=>{setAssignments({...assignments,[p.id]:i});trackEvent("protein_cooker_changed",{protein:p.id,cooker:i+1})}}/>{cookerNames[i]}</label>)}</div>}</article>})}</div></aside>
+      <section className="workspace"><aside className="picker"><div className="section-heading"><div><p className="eyebrow">BUILD YOUR MENU</p><h2>What’s going on the pit?</h2></div><span>{chosen.length} selected</span></div><div className="protein-grid">{PROTEINS.map(p=>{const on=selected.includes(p.id);return <ProteinCard key={p.id} p={p} on={on} config={configs[p.id]} editing={editingProtein===p.id} cookerCount={cookerCount} cookerNames={cookerNames} cooker={cookerFor(p.id)} onToggle={()=>toggleProtein(p.id,on)} onEdit={()=>setEditingProtein(p.id)} onClose={()=>setEditingProtein(null)} onSave={draft=>{setConfigs({...configs,[p.id]:draft});setEditingProtein(null);trackEvent("protein_profile_saved_from_card",{protein:p.id})}} onQuickUpdate={patch=>updatePlanConfig(p.id,patch)} onRibType={setRibType} onCooker={i=>{setAssignments({...assignments,[p.id]:i});trackEvent("protein_cooker_changed",{protein:p.id,cooker:i+1})}}/>})}</div></aside>
         <section className="plan"><div className="plan-head"><div><p className="eyebrow">MASTER TIMELINE</p><h2>Your cook plan</h2></div><button className="outline" onClick={copyPlan}>⧉ Copy</button></div>{events.length===0?<div className="empty"><span>♨</span><h3>Your timeline is waiting</h3><p>Select at least one protein to build the plan.</p></div>:<>{conflicts.map(c=><div className="temp-warning" key={c.cooker}><b>Temperature conflict on {cookerNames[c.cooker]}</b><span>{c.foods.map(p=>`${p.name} (${p.pit})`).join(" and ")} do not share a compatible pit range. Reassign one to another cooker or plan a temperature change.</span></div>)}<div className="kickoff"><span>START HERE</span><div><b>{formatDate(first.at)}</b><small>{duration(first.h)} before serving</small></div><p>{first.p.name}: {first.s.label}</p></div><div className="timeline">{events.map((e,i)=>{const day=i===0||events[i-1].at.toDateString()!==e.at.toDateString();return <div key={`${e.p.id}-${e.s.label}-${e.cooker}`} className={`event ${e.s.kind||"cook"}`}>{day&&<div className="day">{new Intl.DateTimeFormat("en-US",{weekday:"long",month:"long",day:"numeric"}).format(e.at)}</div>}<time>{new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit"}).format(e.at)}</time><i></i><div><b>{e.s.label}</b><span>{e.p.name} · {cookerNames[e.cooker]}</span>{e.s.detail&&<small>{e.s.detail}</small>}</div></div>})}</div></>}</section>
       </section></>:<Settings configs={configs} setConfigs={setConfigs} cookerCount={cookerCount} setCookerCount={setCookerCount} cookerNames={cookerNames} setCookerNames={setCookerNames}/>}<footer><span><b>Pitmaster Munse</b> Cook Planner</span><p>Created in Cajun Country. Made for smoke.</p><small>Timing is a guide—always cook to temperature and tenderness.</small></footer>
   </main>
