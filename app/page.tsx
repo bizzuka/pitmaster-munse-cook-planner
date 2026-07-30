@@ -87,6 +87,14 @@ function ProteinCard({
 }){
   const [draft,setDraft]=useState(config);
   useEffect(()=>{if(!editing)setDraft(config)},[config,editing]);
+  useEffect(()=>{
+    if(!editing)return;
+    const previous=document.body.style.overflow;
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape")onClose()};
+    document.body.style.overflow="hidden";
+    window.addEventListener("keydown",close);
+    return ()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close)};
+  },[editing,onClose]);
   const update=(key:keyof CookConfig,value:number)=>{
     const next={...draft,[key]:value};
     if((key==="weight"||key==="cookPerLb")&&next.cookPerLb>0)next.smoke=Math.max(0,Number((next.weight*next.cookPerLb-next.wrap-next.glaze).toFixed(2)));
@@ -96,22 +104,27 @@ function ProteinCard({
   const total=draft.prep+draft.fire+draft.smoke+draft.wrap+draft.glaze+draft.rest;
   const cookTotal=draft.smoke+draft.wrap+draft.glaze;
   const fields=CARD_FIELDS.filter(([key])=>p.id!=="ribs"||!(["weight","cookPerLb"] as string[]).includes(key));
-  return <article className={`protein ${on?"selected":""} ${editing?"show-settings":""}`} onClick={editing?undefined:onToggle}>
-    {editing?<div className="protein-settings-face" onClick={e=>e.stopPropagation()}>
-      <div className="card-settings-head"><div className="food-icon">{p.emoji}</div><div><small>RECIPE SETTINGS</small><h3>{p.name}</h3></div><button type="button" onClick={onClose}>↩ Back</button></div>
-      {p.id==="ribs"&&<label className="card-rib-setting"><span>Rib type</span><select value={draft.variant} onChange={e=>setDraftRib(e.target.value as "Baby Back"|"St. Louis")}><option>Baby Back</option><option>St. Louis</option></select></label>}
-      <div className="card-settings-grid">{fields.map(([key,label,unit])=><label key={key}><span>{label}</span><div><input type="number" min="0" step=".25" value={draft[key] as number} onChange={e=>update(key,Number(e.target.value))}/><small>{unit}</small></div></label>)}</div>
-      {draft.cookPerLb>0&&<div className="card-formula"><b>Weight formula</b><span>{draft.weight} lb × {draft.cookPerLb} hr/lb = <strong>{(draft.weight*draft.cookPerLb).toFixed(2)} hours</strong></span></div>}
-      <div className="card-settings-summary"><div><small>COOKING STAGES</small><b>{duration(cookTotal)}</b></div><div><small>FULL TIMELINE</small><b>{duration(total)}</b></div><div><small>EARLIEST ACTION</small><b>{total>=24?`${(total/24).toFixed(1)} days`:`${duration(total)}`}</b></div></div>
-      <div className="card-settings-save"><span>Saving updates your default and timeline.</span><button type="button" onClick={()=>onSave(draft)}>Save settings</button></div>
-    </div>:<div className="protein-front-face">
+  return <>
+    <article className={`protein ${on?"selected":""}`} onClick={onToggle}>
+      <div className="protein-front-face">
       <div className="protein-actions"><button type="button" className="card-settings-button" aria-label={`Edit settings for ${p.name}`} title="Edit recipe settings" onClick={e=>{e.stopPropagation();onEdit()}}>⚙</button><button type="button" className="select-protein" aria-label={`${on?"Remove":"Add"} ${p.name}`}>{on?"✓":"+"}</button></div>
       <div className="food-icon">{p.emoji}</div><div><h3>{p.name}</h3><p>{p.description}</p><small>{p.pit}</small></div>
       {on&&p.id==="ribs"&&<div className="weight rib-buttons" onClick={e=>e.stopPropagation()}><span>Rib type</span><button type="button" className={config.variant==="Baby Back"?"active":""} onClick={()=>onRibType("Baby Back")}>Baby Back</button><button type="button" className={config.variant==="St. Louis"?"active":""} onClick={()=>onRibType("St. Louis")}>St. Louis</button></div>}
       {on&&p.id!=="ribs"&&<label className="weight" onClick={e=>e.stopPropagation()}>Weight <input type="number" min=".5" step=".25" value={config.weight} onChange={e=>onQuickUpdate({weight:Number(e.target.value)})}/> lb <em>Updates timeline</em></label>}
       {on&&<div className="cooker-radios" onClick={e=>e.stopPropagation()}><span>Cooker</span>{Array.from({length:cookerCount},(_,i)=><label key={i} className={cooker===i?"active":""}><input type="radio" name={`cooker-${p.id}`} checked={cooker===i} onChange={()=>onCooker(i)}/>{cookerNames[i]}</label>)}</div>}
+      </div>
+    </article>
+    {editing&&<div className="protein-settings-overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <section className="protein-settings-modal" role="dialog" aria-modal="true" aria-label={`${p.name} recipe settings`}>
+        <div className="card-settings-head"><div className="food-icon">{p.emoji}</div><div><small>RECIPE SETTINGS</small><h3>{p.name}</h3></div><button type="button" onClick={onClose}>Close ×</button></div>
+        {p.id==="ribs"&&<label className="card-rib-setting"><span>Rib type</span><select value={draft.variant} onChange={e=>setDraftRib(e.target.value as "Baby Back"|"St. Louis")}><option>Baby Back</option><option>St. Louis</option></select></label>}
+        <div className="card-settings-grid">{fields.map(([key,label,unit])=><label key={key}><span>{label}</span><div><input type="number" min="0" step=".25" value={draft[key] as number} onChange={e=>update(key,Number(e.target.value))}/><small>{unit}</small></div></label>)}</div>
+        {draft.cookPerLb>0&&<div className="card-formula"><b>Weight formula</b><span>{draft.weight} lb × {draft.cookPerLb} hr/lb = <strong>{(draft.weight*draft.cookPerLb).toFixed(2)} hours</strong></span></div>}
+        <div className="card-settings-summary"><div><small>COOKING STAGES</small><b>{duration(cookTotal)}</b></div><div><small>FULL TIMELINE</small><b>{duration(total)}</b></div><div><small>EARLIEST ACTION</small><b>{total>=24?`${(total/24).toFixed(1)} days`:`${duration(total)}`}</b></div></div>
+        <div className="card-settings-save"><span>Saving updates your default and timeline.</span><div><button type="button" className="card-cancel-button" onClick={onClose}>Cancel</button><button type="button" onClick={()=>onSave(draft)}>Save settings</button></div></div>
+      </section>
     </div>}
-  </article>
+  </>
 }
 
 export default function Home(){
